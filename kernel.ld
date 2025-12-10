@@ -9,7 +9,7 @@ SECTIONS {
     }
     
     .rodata : ALIGN(4) {
-        *(.rodata .rodate.*);
+        *(.rodata .rodata.*);
     }
     
     .data : ALIGN(4) {
