@@ -1,5 +1,4 @@
 #include "common.h"
-#include <sys/types.h>
 
 void putchar(char ch);
 
@@ -80,12 +79,12 @@ void *memcpy_s(void *dst, const void *src, size_t n) {
   uint8_t *d = (uint8_t *)dst;
   const uint8_t *s = (const uint8_t *)src;
 
-  while (n && ((uint32_t)d & (sizeof(size_t) - 1))) {
+  while (n && ((size_t)d & (sizeof(size_t) - 1))) {
     *d++ = *s++;
     n--;
   }
 
-  size_t s_addr = (uint32_t)s;
+  size_t s_addr = (size_t)s;
   size_t *dw = (size_t *)d;
   
   if ((s_addr & (sizeof(size_t) - 1)) == 0) {
@@ -118,7 +117,7 @@ void *memcpy_s(void *dst, const void *src, size_t n) {
     }
   }
 
-  size_t bytes_copied = (uintptr_t)dw - (uintptr_t)d;
+  size_t bytes_copied = (size_t)dw - (size_t)d;
   d = (uint8_t *)dw;
   s += bytes_copied;
   
