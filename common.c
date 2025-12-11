@@ -80,12 +80,12 @@ void *memcpy_s(void *dst, const void *src, size_t n) {
   uint8_t *d = (uint8_t *)dst;
   const uint8_t *s = (const uint8_t *)src;
 
-  while (n && ((uintptr_t)d & (sizeof(size_t) - 1))) {
+  while (n && ((uint32_t)d & (sizeof(size_t) - 1))) {
     *d++ = *s++;
     n--;
   }
 
-  uintptr_t s_addr = (uintptr_t)s;
+  size_t s_addr = (uint32_t)s;
   size_t *dw = (size_t *)d;
   
   if ((s_addr & (sizeof(size_t) - 1)) == 0) {
