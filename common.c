@@ -1,4 +1,5 @@
 #include "common.h"
+#include <sys/types.h>
 
 void putchar(char ch);
 
@@ -62,4 +63,166 @@ void printf(const char *fmt, ...) {
 
 end:
   va_end(vargs);
+}
+
+void *memcpy(void *dst, const void *src, size_t n) {
+  uint8_t *d = (uint8_t *)dst;
+  const uint8_t *s = (const uint8_t *)src;
+  while (n--)
+    *d++ = *s++;
+  return dst;
+}
+
+void *memcpy_s(void *dst, const void *src, size_t n) {
+  if (dst == NULL || src == NULL)
+    return dst;
+
+  uint8_t *d = (uint8_t *)dst;
+  const uint8_t *s = (const uint8_t *)src;
+
+  while (n && ((uintptr_t)d & (sizeof(size_t) - 1))) {
+    *d++ = *s++;
+    n--;
+  }
+
+  uintptr_t s_addr = (uintptr_t)s;
+  size_t *dw = (size_t *)d;
+  
+  if ((s_addr & (sizeof(size_t) - 1)) == 0) {
+    const size_t *sw = (const size_t *)s;
+    while (n >= sizeof(size_t)) {
+      *dw++ = *sw++;
+      n -= sizeof(size_t);
+    }
+  } else {
+
+    int offest = s_addr & (sizeof(size_t) - 1);
+    int shift_right = offest * 8;
+    int shift_left = (sizeof(size_t) * 8) - shift_right;
+
+    const size_t *sw = (const size_t *)(s_addr & ~(sizeof(size_t) - 1));
+    
+    size_t w1 = *sw++;
+    
+    size_t *dw = (size_t *)d;
+    
+    while (n >= sizeof(size_t)) {
+        size_t w2 = *sw++;
+        
+        size_t result = (w1 >> shift_right) | (w2 << shift_left);
+        
+        *dw++ = result;
+        
+        w1 = w2;
+        n -= sizeof(size_t);
+    }
+  }
+
+  size_t bytes_copied = (uintptr_t)dw - (uintptr_t)d;
+  d = (uint8_t *)dw;
+  s += bytes_copied;
+  
+  while (n--)
+    *d++ = *s++;
+
+  return dst;
+}
+
+void *memmove(void *dst, const void *src, size_t n) {
+  if (dst < src) {
+    return memcpy_s(dst, src, n);
+  } else {
+    uint8_t *d = (uint8_t *)dst + n;
+    const uint8_t *s = (const uint8_t *)src + n;
+    while (n--)
+      *--d = *--s;
+    return dst;
+  }
+}
+
+void *memset(void *buf, char c, size_t n) {
+  uint8_t *p = (uint8_t *)buf;
+  while (n--)
+    *p++ = c;
+  return buf;
+}
+
+char *strcpy(char *dst, const char *src) {
+  char *d = dst;
+  while (*src)
+    *d++ = *src++;
+  *d = '\0';
+  return dst;
+}
+
+char *strcpy_s(char *dst, const char *src, size_t n) {
+  if (dst == NULL || src == NULL)
+    return dst;
+
+  char *d = dst;
+  while (n && *src) {
+    *d++ = *src++;
+    n--;
+  }
+
+  while (n--)
+    *d++ = '\0';
+
+  return dst;
+}
+
+size_t strlcpy(char *dst, const char *src, size_t size) {
+  size_t src_len = 0;
+
+  while (src[src_len])
+    src_len++;
+
+  if (size > 0) {
+    size_t copy_len = (src_len < size - 1) ? src_len : size - 1;
+    memcpy_s(dst, src, copy_len);
+    dst[copy_len] = '\0';
+  }
+
+  return src_len;
+}
+
+int strcmp(const char *s1, const char *s2) {
+  while (*s1 && *s2) {
+    if (*s1 != *s2)
+      break;
+    s1++;
+    s2++;
+  }
+
+  return *(unsigned char *)s1 - *(unsigned char *)s2;
+}
+
+int strcmp_s(const char *s1, const char *s2, size_t n) {
+  while (*s1 && *s2) {
+    if (*s1 != *s2)
+      break;
+    s1++;
+    s2++;
+  }
+
+  if (n == (size_t)-1)
+    return 0;
+
+  return *(unsigned char *)s1 - *(unsigned char *)s2;
+}
+
+size_t strlen(const char *s) {
+  size_t len = 0;
+  while (*s++)
+    len++;
+  return len;
+}
+
+char *strchr(const char *s, int c) {
+  while (*s) {
+    if (*s == c)
+      return (char *)s;
+    s++;
+  }
+  return NULL;
 }
