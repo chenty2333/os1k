@@ -1,9 +1,7 @@
 #include "kernel.h"
+#include "common.h"
 
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef uint32_t size_t;
-
+static uint8_t page_bitmap[MAX_PAGES / 8];
 extern char __bss[], __bss_end[], __stack_top[];
 
 __attribute__((naked)) __attribute__((aligned(4))) void kernel_entry(void) {
@@ -105,6 +103,8 @@ struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
   return (struct sbiret){.error = a0, .value = a1};
 }
 
+void putchar(char ch) { sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); }
+
 void handle_trap(struct trap_frame *f) {
   uint32_t scause = READ_CSR(scause);
   uint32_t stval = READ_CSR(stval);
@@ -114,15 +114,46 @@ void handle_trap(struct trap_frame *f) {
         user_pc);
 }
 
-void putchar(char ch) { sbi_call(ch, 0, 0, 0, 0, 0, 0, 1); }
+extern char __free_ram[], __free_ram_end[];
+
+paddr_t alloc_pages(uint32_t n) {
+  for (uint32_t i = 0; i <= MAX_PAGES - n; i++) {
+    bool found = true;
+    for (uint32_t j = 0; j < n; j++) {
+      if (BITMAP_TEST(i + j)) {
+        found = false;
+        break;
+      }
+    }
+    if (found) {
+      for (uint32_t j = 0; j < n; j++)
+        BITMAP_SET(i + j);
+      paddr_t paddr = (paddr_t)__free_ram + i * PAGE_SIZE;
+      memset((void *)paddr, 0, n * PAGE_SIZE);
+      return paddr;
+    }
+  }
+  PANIC("out of memory");
+}
+
+void free_pages(paddr_t paddr, uint32_t n) {
+  uint32_t page_index = (paddr - (paddr_t)__free_ram) / PAGE_SIZE;
+  for (uint32_t i = 0; i < n; i++) {
+    BITMAP_CLEAR(page_index + i);
+  }
+}
 
 void kernel_main(void) {
   memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
 
   printf("\n\nHello %s\n", "World!");
   printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
+  paddr_t paddr0 = alloc_pages(2);
+  paddr_t paddr1 = alloc_pages(1);
+  printf("alloc_pages test: paddr0=%x\n", paddr0);
+  printf("alloc_pages test: paddr1=%x\n", paddr1);
 
-  WRITE_CSR(stvec, (uint32_t) kernel_entry);
+  WRITE_CSR(stvec, (uint32_t)kernel_entry);
   __asm__ __volatile__("unimp");
   PANIC("booted!");
   printf("unreadhcable here!\n");

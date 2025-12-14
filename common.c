@@ -1,7 +1,5 @@
 #include "common.h"
 
-void putchar(char ch);
-
 void printf(const char *fmt, ...) {
   va_list vargs;
   va_start(vargs, fmt);
@@ -79,20 +77,21 @@ void *memcpy_s(void *dst, const void *src, size_t n) {
   uint8_t *d = (uint8_t *)dst;
   const uint8_t *s = (const uint8_t *)src;
 
-  while (n && ((size_t)d & (sizeof(size_t) - 1))) {
+  while (n && ((paddr_t)d & (sizeof(size_t) - 1))) {
     *d++ = *s++;
     n--;
   }
 
-  size_t s_addr = (size_t)s;
+  paddr_t s_addr = (paddr_t)s;
   size_t *dw = (size_t *)d;
-  
+
   if ((s_addr & (sizeof(size_t) - 1)) == 0) {
     const size_t *sw = (const size_t *)s;
     while (n >= sizeof(size_t)) {
       *dw++ = *sw++;
       n -= sizeof(size_t);
     }
+    s = (const uint8_t *)sw;
   } else {
 
     int offest = s_addr & (sizeof(size_t) - 1);
@@ -100,27 +99,25 @@ void *memcpy_s(void *dst, const void *src, size_t n) {
     int shift_left = (sizeof(size_t) * 8) - shift_right;
 
     const size_t *sw = (const size_t *)(s_addr & ~(sizeof(size_t) - 1));
-    
+
     size_t w1 = *sw++;
-    
-    size_t *dw = (size_t *)d;
-    
+
     while (n >= sizeof(size_t)) {
-        size_t w2 = *sw++;
-        
-        size_t result = (w1 >> shift_right) | (w2 << shift_left);
-        
-        *dw++ = result;
-        
-        w1 = w2;
-        n -= sizeof(size_t);
+      size_t w2 = *sw++;
+
+      size_t result = (w1 >> shift_right) | (w2 << shift_left);
+
+      *dw++ = result;
+
+      w1 = w2;
+      n -= sizeof(size_t);
     }
+
+    s = (const uint8_t *)s + ((uint8_t *)dw - d);
   }
 
-  size_t bytes_copied = (size_t)dw - (size_t)d;
   d = (uint8_t *)dw;
-  s += bytes_copied;
-  
+
   while (n--)
     *d++ = *s++;
 
@@ -196,15 +193,16 @@ int strcmp(const char *s1, const char *s2) {
   return *(unsigned char *)s1 - *(unsigned char *)s2;
 }
 
-int strcmp_s(const char *s1, const char *s2, size_t n) {
-  while (*s1 && *s2) {
+int strncmp(const char *s1, const char *s2, size_t n) {
+  while (n > 0 && *s1 && *s2) {
     if (*s1 != *s2)
       break;
     s1++;
     s2++;
+    n--;
   }
 
-  if (n == (size_t)-1)
+  if (n == 0)
     return 0;
 
   return *(unsigned char *)s1 - *(unsigned char *)s2;

@@ -58,3 +58,9 @@ struct sbiret {
   long error;
   long value;
 };
+
+#define BITMAP_SET(i) (page_bitmap[(i) / 8] |= (1 << ((i) % 8)))
+#define BITMAP_CLEAR(i) (page_bitmap[(i) / 8] &= ~(1 << ((i) % 8)))
+#define BITMAP_TEST(i) (page_bitmap[(i) / 8] & (1 << ((i) % 8)))
+
+void putchar(char ch);
