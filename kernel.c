@@ -21,7 +21,7 @@ void proc_a_entry(void) {
   printf("Starting process A\n");
   while (1) {
     putchar('A');
-    switch_context(&proc_a->sp, &proc_b->sp);
+    yield();
     delay();
   }
 }
@@ -30,7 +30,7 @@ void proc_b_entry(void) {
   printf("Starting process B\n");
   while (1) {
     putchar('B');
-    switch_context(&proc_b->sp, &proc_a->sp);
+    yield();
     delay();
   }
 }

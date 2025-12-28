@@ -1,5 +1,10 @@
 #include "process.h"
+#include "common.h"
 #include "kernel.h"
+#include "memory.h"
+
+extern char __kernel_base[];
+extern char __free_ram_end[];
 
 struct process procs[PROCS_MAX];
 struct process *current_proc;
@@ -70,6 +75,16 @@ struct process *create_process(uint32_t pc) {
   *--sp = 0;            // s0
   *--sp = (uint32_t)pc; // ra
 
+  uint32_t *page_table = (uint32_t *)alloc_pages(1);
+
+  /* Identity map the kernel memory so we can run kernel code after enabling paging */
+  for (paddr_t paddr = (paddr_t)__kernel_base; paddr < (paddr_t)__free_ram_end;
+       paddr += PAGE_SIZE) {
+    map_page(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
+  }
+
+  proc->page_table = page_table;
+
   proc->pid = i + 1;
   proc->state = PROC_RUNNABLE;
   proc->sp = (uint32_t)sp;
@@ -92,10 +107,18 @@ void yield(void) {
   struct process *prev = current_proc;
   current_proc = next;
 
+  /*
+   * Switch the page table and the kernel stack.
+   * sfence.vma is required to flush the TLB.
+   */
   __asm__ __volatile__(
-      "csrw sscratch, %[sscratch]\n"
+      "sfence.vma\n"                                       /* Flush TLB */
+      "csrw satp, %[satp]\n"                               /* Switch page table */
+      "sfence.vma\n"                                       /* Flush TLB again */
+      "csrw sscratch, %[sscratch]\n"                       /* Update scratch register */
       :
-      : [sscratch] "r"((uint32_t)&next->stack[sizeof(next->stack)]));
+      : [satp] "r"(SATP_SV32 | ((uint32_t)next->page_table / PAGE_SIZE)),
+        [sscratch] "r"((uint32_t)&next->stack[sizeof(next->stack)]));
 
   switch_context(&prev->sp, &next->sp);
 }

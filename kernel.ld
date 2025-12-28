@@ -2,6 +2,7 @@ ENTRY(boot)
 
 SECTIONS {
     . = 0x80200000;
+    __kernel_base = .;
 
     .text :{
         KEEP(*(.text.boot));
@@ -25,7 +26,7 @@ SECTIONS {
     . = ALIGN(4);
     . += 128 * 1024;
     __stack_top = .;
-    
+
     . = ALIGN(4096);
     __free_ram = .;
     . += 64 * 1024 *1024;
