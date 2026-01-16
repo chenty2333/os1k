@@ -8,32 +8,7 @@
 
 extern char __bss[], __bss_end[], __stack_top[];
 extern void kernel_entry(void); // Defined in trap.c
-
-void delay(void) {
-  for (int i = 0; i < 30000000; i++)
-    __asm__ __volatile__("nop");
-}
-
-struct process *proc_a;
-struct process *proc_b;
-
-void proc_a_entry(void) {
-  printf("Starting process A\n");
-  while (1) {
-    putchar('A');
-    yield();
-    delay();
-  }
-}
-
-void proc_b_entry(void) {
-  printf("Starting process B\n");
-  while (1) {
-    putchar('B');
-    yield();
-    delay();
-  }
-}
+extern char _binary_shell_bin_start[], _binary_shell_bin_size[];
 
 void kernel_main(void) {
   memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
@@ -45,18 +20,16 @@ void kernel_main(void) {
   printf("alloc_pages test: paddr0=%x\n", paddr0);
   printf("alloc_pages test: paddr1=%x\n", paddr1);
 
-  idle_proc = create_process((uint32_t)NULL);
+  WRITE_CSR(stvec, (uint32_t)kernel_entry);
+
+  idle_proc = create_process(NULL, 0);
   idle_proc->pid = 0;
   current_proc = idle_proc;
 
-  proc_a = create_process((uint32_t)proc_a_entry);
-  proc_b = create_process((uint32_t)proc_b_entry);
+  create_process(_binary_shell_bin_start, (size_t)_binary_shell_bin_size);
 
   yield();
-
-  for (;;) {
-    __asm__ __volatile__("wfi");
-  }
+  PANIC("switched to idle process");
 }
 
 __attribute__((section(".text.boot"))) __attribute__((naked)) void boot(void) {

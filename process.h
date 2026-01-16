@@ -15,12 +15,13 @@ struct process {
 
 /**
  * create_process - Create a new process.
- * @pc: The entry point (program counter) of the process.
+ * @image: Pointer to the executable image (e.g., shell.bin).
+ * @image_size: Size of the executable image.
  *
  * Allocates a process control block, sets up the initial stack frame,
- * creates a new page table, and identity-maps the kernel memory.
+ * creates a new page table, and maps the executable image into user memory.
  */
-struct process *create_process(uint32_t pc);
+struct process *create_process(const void *image, size_t image_size);
 
 /**
  * switch_context - Switch CPU context (callee-saved registers).
