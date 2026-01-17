@@ -4,11 +4,42 @@
 #include "process.h"
 #include "riscv.h"
 #include "sbi.h"
+#include "syscall.h"
 #include "trap.h"
 
 extern char __bss[], __bss_end[], __stack_top[];
 extern void kernel_entry(void); // Defined in trap.c
 extern char _binary_shell_bin_start[], _binary_shell_bin_size[];
+
+long getchar(void) {
+  struct sbiret ret = sbi_call(0, 0, 0, 0, 0, 0, 0, 2);
+  return ret.error;
+}
+
+void handle_syscall(struct trap_frame *f) {
+  switch (f->a3) {
+  case SYS_PUTCHAR:
+    putchar(f->a0);
+    break;
+  case SYS_GETCHAR:
+    while (1) {
+      long ch = getchar();
+      if (ch >= 0) {
+        f->a0 = ch;
+        break;
+      }
+      yield();
+    }
+    break;
+  case SYS_EXIT:
+    printf("process %d exited\n", current_proc->pid);
+    current_proc->state = PROC_EXITED;
+    yield();
+    PANIC("unreachable");
+  default:
+    PANIC("unexpected syscall a3=%x\n", f->a3);
+  }
+}
 
 void kernel_main(void) {
   memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);

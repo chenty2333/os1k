@@ -41,3 +41,6 @@
 
 #define SSTATUS_SPIE (1 << 5)
 #define SSTATUS_SPP (1 << 8)
+
+#define SCAUSE_ECALL 8
+#define PROC_EXITED 2

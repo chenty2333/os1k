@@ -85,11 +85,20 @@ __attribute__((naked)) __attribute__((aligned(4))) void kernel_entry(void) {
       "sret\n");
 }
 
+extern void handle_syscall(struct trap_frame *f);
+
 void handle_trap(struct trap_frame *f) {
   uint32_t scause = READ_CSR(scause);
   uint32_t stval = READ_CSR(stval);
   uint32_t user_pc = READ_CSR(sepc);
 
-  PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval,
-        user_pc);
+  if (scause == SCAUSE_ECALL) {
+    handle_syscall(f);
+    user_pc += 4;
+  } else {
+    PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval,
+          user_pc);
+  }
+
+  WRITE_CSR(sepc, user_pc);
 }
