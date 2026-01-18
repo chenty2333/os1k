@@ -30,6 +30,22 @@ echo "Hello from host" > disk/hello.txt
 Build && Run
 
 ```
-./run
+./run.sh
+```
+
+Test
+
+```
+> readfile
+Hello from host
+
+> writefile
+wrote 2560 bytes to disk
+
+> readfile
+Hello from shell!
+
+> hello
+Hello world from shell!
 ```
 
